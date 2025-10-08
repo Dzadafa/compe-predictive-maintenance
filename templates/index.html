@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Device Dashboard</title>
+  <style>
+    body { background:#323233; color:#fff; font-family: sans-serif; margin:0; padding:20px; }
+    h1 { text-align:center; }
+    .device {
+      background:#444; margin:10px auto; padding:15px; border-radius:8px;
+      max-width:600px; box-shadow:0 2px 6px rgba(0,0,0,0.4);
+    }
+    .device h2 {
+      margin:0; color:#4fc3f7; cursor:pointer;
+    }
+    .countdown { margin:8px 0; }
+    button {
+      margin-right:10px; padding:6px 12px; border:none; border-radius:4px;
+      background:#4caf50; color:white; cursor:pointer;
+    }
+    input { padding:5px; width:80px; border-radius:4px; border:1px solid #777; }
+    /* --- NEW STYLES --- */
+    .add-device {
+      text-align:center; margin: 20px auto; padding: 15px; background: #444;
+      border-radius: 8px; max-width: 600px;
+    }
+    #no-devices-msg {
+      text-align: center; margin-top: 30px; color: #aaa; font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <h1>Devices Dashboard</h1>
+
+  <!-- <div class="add-device"> -->
+  <!--   <input type="number" id="new-device-num" placeholder="Device #"> -->
+  <!--   <button onclick="addDevice()">+ Add Device</button> -->
+  <!-- </div> -->
+
+  <div id="devices"></div>
+  <div id="no-devices-msg" style="display: none;">
+    No online devices detected.
+  </div>
+
+
+  <script>
+    // --- NEW: List of devices to display on the frontend ---
+    let subscribedDevices = [];
+    for (let i = 1; i <= 10; i++) {
+        subscribedDevices.push(`Pompa${i}`);
+    }
+
+
+    function loadDevices() {
+      fetch("/devices")
+        .then(res => res.json())
+        .then(allDevices => {
+          const container = document.getElementById("devices");
+          const noDevicesMsg = document.getElementById("no-devices-msg");
+          container.innerHTML = "";
+
+          // Filter for devices we are subscribed to on the frontend
+          const devicesToShow = allDevices.filter(dev => subscribedDevices.includes(dev.name));
+          
+          let onlineDeviceFound = false;
+
+          if (devicesToShow.length > 0) {
+              devicesToShow.forEach(dev => {
+                // Find the original index from the full device list for API calls
+                const originalIndex = allDevices.findIndex(d => d.name === dev.name);
+
+                const div = document.createElement("div");
+                div.className = "device";
+
+                // build device card
+                div.innerHTML = `
+                  <h2 onclick="window.location='plot?device=${originalIndex}'">${dev.name}</h2>
+                  <div class="countdown" id="cd-${originalIndex}">Loading...</div>
+                  <button id="reset-${originalIndex}" onclick="resetCountdown(${originalIndex})">Reset</button>
+                  <input type="text" id="set-${originalIndex}" placeholder="e.g. 10d, 2m, 1y">
+                  <button id="setbtn-${originalIndex}" onclick="setCountdown(${originalIndex})">Set</button>
+                `;
+
+                // if offline → dim + disable
+                if (!dev.online) {
+                  div.style.opacity = "0.5";
+                  div.querySelector(`#reset-${originalIndex}`).disabled = true;
+                  div.querySelector(`#set-${originalIndex}`).disabled = true;
+                  div.querySelector(`#setbtn-${originalIndex}`).disabled = true;
+                  div.querySelector('h2[onclick*="plot?device"]').removeAttribute("onclick")
+                } else {
+                  onlineDeviceFound = true; // Mark that we found at least one online device
+                }
+
+                container.appendChild(div);
+              });
+          }
+
+          // --- NEW: Show/Hide the "no devices" message ---
+          if (onlineDeviceFound) {
+            noDevicesMsg.style.display = 'none';
+          } else {
+            noDevicesMsg.style.display = 'block';
+          }
+
+        });
+    }
+
+        // --- UPDATED Function to add a device ---
+    function addDevice() {
+        const input = document.getElementById('new-device-num');
+        const deviceNum = input.value;
+        if (!deviceNum) return;
+
+        const deviceName = `Pompa${deviceNum}`;
+        if (!subscribedDevices.includes(deviceName)) {
+            // Step 1: Tell the backend to subscribe to this new device
+            fetch('/subscribe', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ device_name: deviceName }),
+            })
+            .then(res => res.json())
+            .then(data => {
+                console.log('Subscription response:', data);
+                // Step 2: Add to frontend list and refresh the UI
+                subscribedDevices.push(deviceName);
+                // Use a small delay to give MQTT time to connect and receive data
+                setTimeout(loadDevices, 500);
+            })
+            .catch(error => console.error('Error subscribing:', error));
+        }
+        input.value = ''; // Clear the input
+    }
+
+
+    function updateCountdowns() {
+      fetch("/devices")
+        .then(res => res.json())
+        .then(devices => {
+          devices.forEach((dev, idx) => {
+            // Only update countdowns for devices we are showing
+            if (subscribedDevices.includes(dev.name)) {
+                fetch(`/get_countdown/${idx}`)
+                  .then(res => res.json())
+                  .then(data => {
+                    const el = document.getElementById("cd-" + idx);
+                    if (el) el.innerText = `Maintenance in: ${data.pretty}`;
+                  });
+            }
+          });
+        });
+    }
+
+
+    function resetCountdown(idx) {
+      fetch(`/reset_countdown/${idx}`, { method: "POST" })
+        .then(() => updateCountdowns());
+    }
+
+    function setCountdown(idx) {
+      const val = document.getElementById("set-" + idx).value.trim();
+      if (!val) return;
+      fetch(`/countdown/${idx}/set`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value: val })
+      })
+        .then(res => res.json())
+        .then(data => {
+          console.log("Set countdown:", data);
+          updateCountdowns();
+        });
+    }
+
+
+
+    // refresh
+    loadDevices();
+    setInterval(updateCountdowns, 1000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-g" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maintenance Countdown</title>
+  <style>
+    :root {
+      --bg: #323233;
+      --accent: #4fc3f7;
+      --text-color: #fff;
+      --error-color: #ff7373;
+      --button-bg: #4caf50;
+    }
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: var(--bg);
+      font-family: Inter, system-ui, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--text-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      box-sizing: border-box;
+      width: 100%;
+    }
+    h1 {
+      margin: 0 0 12px;
+      font-size: clamp(1.5rem, 4vw, 2.2rem);
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .device {
+      font-size: clamp(1rem, 2.5vw, 1.25rem);
+      margin-bottom: 20px;
+      opacity: .9;
+    }
+    .time {
+      font-size: clamp(3rem, 10vw, 8rem);
+      margin: 20px 0;
+      font-weight: 700;
+      line-height: 1;
+    }
+    button {
+      background: var(--button-bg);
+      border: 0;
+      color: var(--text-color);
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: clamp(1rem, 2.5vw, 1.25rem);
+      transition: transform 0.1s ease;
+      margin-top: 20px;
+    }
+    button:active {
+      transform: translateY(2px);
+    }
+    .small {
+      font-size: clamp(0.75rem, 1.5vw, 0.9rem);
+      color: #ddd;
+      margin-top: 15px;
+    }
+    .err {
+      color: var(--error-color);
+      margin-top: 15px;
+      font-size: clamp(0.8rem, 2vw, 1rem);
+      min-height: 1.2em;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Maintenance Countdown</h1>
+    <div class="device">Device: <span id="deviceName">Loading...</span></div>
+    <div class="time" id="countdown">Loading…</div>
+    <button id="resetBtn">Reset Countdown</button>
+    <!-- <div class="small">Polls every 1s. Click Reset after maintenance.</div> -->
+    <div class="err" id="err"></div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const deviceId = Number(params.get('device') ?? 0);
+
+    const deviceNameEl = document.getElementById('deviceName');
+    const cdEl = document.getElementById('countdown');
+    const errEl = document.getElementById('err');
+    const resetBtn = document.getElementById('resetBtn');
+
+    let deviceTopicName = '';
+
+    async function fetchDeviceName() {
+        try {
+            const res = await fetch(`/devices`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const devices = await res.json();
+            if (devices && devices[deviceId] && devices[deviceId].name) {
+                deviceTopicName = devices[deviceId].name;
+                deviceNameEl.textContent = `${deviceTopicName} (ID: ${deviceId})`;
+            } else {
+                deviceNameEl.textContent = `Device ID: ${deviceId}`;
+            }
+        } catch (e) {
+            console.error('fetchDeviceName:', e);
+            deviceNameEl.textContent = `Device ID: ${deviceId}`;
+        }
+    }
+
+    async function fetchCountdown() {
+      try {
+        const res = await fetch(`/get_countdown/${deviceId}`);
+        if (!res.ok) {
+          if (res.status === 404) {
+             throw new Error('Device not found. Is it online?');
+          }
+          throw new Error(`HTTP ${res.status}`);
+        }
+        const data = await res.json();
+
+        if (data.pretty) {
+          cdEl.textContent = data.pretty;
+        } else if (typeof data.remaining === 'number') {
+          cdEl.textContent = formatDurationDaysOnly(data.remaining);
+        } else {
+          cdEl.textContent = 'No data';
+        }
+        errEl.textContent = '';
+      } catch (e) {
+        errEl.textContent = e.message || 'Error fetching countdown';
+        cdEl.textContent = '—';
+        console.error('fetchCountdown:', e);
+      }
+    }
+
+    async function resetCountdown() {
+      try {
+        resetBtn.disabled = true;
+        const res = await fetch(`/reset_countdown/${deviceId}`, { method: 'POST' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        await fetchCountdown();
+      } catch (e) {
+        errEl.textContent = 'Reset failed';
+        console.error('resetCountdown:', e);
+      } finally {
+        resetBtn.disabled = false;
+      }
+    }
+    
+    function formatDurationDaysOnly(seconds) {
+      seconds = Math.max(0, Math.floor(Number(seconds) || 0));
+      const years = Math.floor(seconds / 31536000);
+      seconds %= 31536000;
+      const months = Math.floor(seconds / 2592000);
+      seconds %= 2592000;
+      const weeks = Math.floor(seconds / 604800);
+      seconds %= 604800;
+      const days = Math.floor(seconds / 86400);
+      seconds %= 86400;
+      const hours = Math.floor(seconds / 3600);
+      seconds %= 3600;
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = seconds % 60;
+
+
+      const parts = [];
+      if (years) parts.push(`${years}y`);
+      if (months) parts.push(`${months}mo`);
+      if (weeks) parts.push(`${weeks}w`);
+      if (days) parts.push(`${days}d`);
+      if (hours) parts.push(`${hours}h`);
+      if (minutes) parts.push(`${minutes}m`);
+      if (remainingSeconds || parts.length === 0) parts.push(`${remainingSeconds}s`);
+
+      return parts.join(' ');
+    }
+
+    resetBtn.addEventListener('click', resetCountdown);
+
+    fetchDeviceName();
+    fetchCountdown();
+    setInterval(fetchCountdown, 1000);
+  </script>
+</body>
+</html>
+

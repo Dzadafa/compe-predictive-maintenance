@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>3D Vibration Scatter</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <style>
+    body, html { margin: 0; height: 100%; background-color: #323233;}
+    #plot { width: 100%; height: 100%; background-color: #323233;}
+  </style>
+</head>
+<body>
+  <div id="plot"></div>
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const device = urlParams.get("device") || 0;
+
+    // store history here
+    let xs = [], ys = [], zs = [], colors = [];
+
+    function getColor(kategori) {
+      if (kategori<= 1) return "green";         // Good
+      if (kategori <= 2) return "yellow";        // Satisfactory
+      if (kategori <= 3) return "orange";        // Unsatisfactory
+      return "red";                            // Unacceptable
+    }
+
+    function updatePlot() {
+      fetch(`/data?device=${device}`)
+        .then(res => res.json())
+        .then(data => {
+          if (!data || data.velocity_x === undefined || data.velocity_y === undefined || data.velocity_z === undefined) return;
+
+          // add new sample to arrays
+          xs.push(data.velocity_x);
+          ys.push(data.velocity_y);
+          zs.push(data.velocity_z);
+          colors.push(getColor(data.kategori));
+
+          // keep only last 50 points
+          if (xs.length > 50) {
+            xs.shift(); ys.shift(); zs.shift(); colors.shift();
+          }
+
+          // re-draw with history
+          Plotly.newPlot('plot', [{
+            x: xs,
+            y: ys,
+            z: zs,
+            mode: 'markers',
+            type: 'scatter3d',
+            marker: { size: 4, color: colors }
+          }], {
+            margin: { l: 0, r: 0, b: 0, t: 0 },
+            paper_bgcolor: '#323233',
+            plot_bgcolor: '#323233',
+            scene: {
+              bgcolor: '#323233',
+              xaxis: { gridcolor: '#555', zerolinecolor: '#888', linecolor: '#aaa', tickcolor: '#ccc', color: '#fff' },
+              yaxis: { gridcolor: '#555', zerolinecolor: '#888', linecolor: '#aaa', tickcolor: '#ccc', color: '#fff' },
+              zaxis: { gridcolor: '#555', zerolinecolor: '#888', linecolor: '#aaa', tickcolor: '#ccc', color: '#fff' }
+            }
+          }, {
+            displaylogo: false,
+            modeBarButtonsToRemove: [
+              'toImage','sendDataToCloud','zoom3d','pan3d','orbitRotation','tableRotation',
+              'hoverClosest3d','hoverClosestCartesian','lasso2d','select2d',
+              'zoom2d','pan2d','zoomIn2d','zoomOut2d','autoScale2d',
+              'resetScale2d','hoverClosestGl2d','hoverClosestPie','toggleHover',
+              'resetViews','resetCameraLastSave3d',
+              'toggleSpikelines','resetViewMapbox'
+            ]
+          });
+        });
+    }
+
+    setInterval(updatePlot, 2000);
+  </script>
+</body>
+</html>
