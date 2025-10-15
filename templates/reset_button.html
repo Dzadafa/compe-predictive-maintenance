@@ -1,0 +1,92 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reset Countdown</title>
+  <style>
+    :root {
+      --bg: #323233;
+      --text-color: #fff;
+      --button-bg: #c62828; /* Red for a reset button */
+      --button-active-bg: #d32f2f;
+      --success-color: #4caf50;
+      --error-color: #ff7373;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      margin: 0;
+      background: var(--bg);
+      font-family: Inter, system-ui, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--text-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      padding: 10px;
+      text-align: center;
+    }
+    button {
+      background: var(--button-bg);
+      border: 0;
+      color: var(--text-color);
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 600;
+      /* Responsive font size and padding */
+      font-size: clamp(1rem, 5vw, 2rem);
+      padding: clamp(15px, 4vw, 30px) clamp(30px, 8vw, 60px);
+      transition: transform 0.1s ease, background-color 0.2s;
+    }
+    button:active {
+      transform: scale(0.95);
+      background-color: var(--button-active-bg);
+    }
+    .message {
+      margin-top: 15px;
+      font-size: clamp(0.9rem, 2.5vw, 1.2rem);
+      min-height: 1.2em;
+      color: var(--success-color);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <button id="resetBtn">Reset Countdown</button>
+    <div class="message" id="message"></div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const deviceId = Number(params.get('device') ?? 0);
+    const resetBtn = document.getElementById('resetBtn');
+    const messageEl = document.getElementById('message');
+
+    async function resetCountdown() {
+      try {
+        resetBtn.disabled = true;
+        resetBtn.textContent = 'Resetting...';
+        const res = await fetch(`/reset_countdown/${deviceId}`, { method: 'POST' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        messageEl.textContent = 'Countdown has been reset!';
+        setTimeout(() => messageEl.textContent = '', 3000); // Clear message after 3s
+      } catch (e) {
+        messageEl.textContent = 'Reset failed!';
+        messageEl.style.color = 'var(--error-color)';
+        setTimeout(() => {
+            messageEl.textContent = '';
+            messageEl.style.color = 'var(--success-color)';
+        }, 3000);
+      } finally {
+        resetBtn.disabled = false;
+        resetBtn.textContent = 'Reset Countdown';
+      }
+    }
+
+    resetBtn.addEventListener('click', resetCountdown);
+  </script>
+</body>
+</html>

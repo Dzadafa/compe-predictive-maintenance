@@ -42,36 +42,75 @@
             xs.shift(); ys.shift(); zs.shift(); colors.shift();
           }
 
-          // re-draw with history
-          Plotly.newPlot('plot', [{
-            x: xs,
-            y: ys,
-            z: zs,
-            mode: 'markers',
-            type: 'scatter3d',
-            marker: { size: 4, color: colors }
-          }], {
-            margin: { l: 0, r: 0, b: 0, t: 0 },
-            paper_bgcolor: '#323233',
-            plot_bgcolor: '#323233',
-            scene: {
-              bgcolor: '#323233',
-              xaxis: { gridcolor: '#555', zerolinecolor: '#888', linecolor: '#aaa', tickcolor: '#ccc', color: '#fff' },
-              yaxis: { gridcolor: '#555', zerolinecolor: '#888', linecolor: '#aaa', tickcolor: '#ccc', color: '#fff' },
-              zaxis: { gridcolor: '#555', zerolinecolor: '#888', linecolor: '#aaa', tickcolor: '#ccc', color: '#fff' }
-            }
-          }, {
-            displaylogo: false,
-            modeBarButtonsToRemove: [
-              'toImage','sendDataToCloud','zoom3d','pan3d','orbitRotation','tableRotation',
-              'hoverClosest3d','hoverClosestCartesian','lasso2d','select2d',
-              'zoom2d','pan2d','zoomIn2d','zoomOut2d','autoScale2d',
-              'resetScale2d','hoverClosestGl2d','hoverClosestPie','toggleHover',
-              'resetViews','resetCameraLastSave3d',
-              'toggleSpikelines','resetViewMapbox'
-            ]
+          Plotly.newPlot('plot', [
+  {
+    x: xs,
+    y: ys,
+    z: zs,
+    mode: 'markers',
+    type: 'scatter3d',
+    marker: { size: 4, color: colors },
+    name: 'Vibration Data',
+    showlegend: false // actual points don’t clutter the legend
+  },
+  {
+    x: [null], y: [null], z: [null],
+    mode: 'markers',
+    type: 'scatter3d',
+    marker: { color: 'green', size: 5 },
+    name: 'Good'
+  },
+  {
+    x: [null], y: [null], z: [null],
+    mode: 'markers',
+    type: 'scatter3d',
+    marker: { color: 'yellow', size: 5 },
+    name: 'Satisfactory'
+  },
+  {
+    x: [null], y: [null], z: [null],
+    mode: 'markers',
+    type: 'scatter3d',
+    marker: { color: 'orange', size: 5 },
+    name: 'Unsatisfactory'
+  },
+  {
+    x: [null], y: [null], z: [null],
+    mode: 'markers',
+    type: 'scatter3d',
+    marker: { color: 'red', size: 5 },
+    name: 'Unacceptable'
+  }
+], {
+  margin: { l: 0, r: 0, b: 0, t: 0 },
+  paper_bgcolor: '#323233',
+  plot_bgcolor: '#323233',
+  legend: {
+    x: 0,
+    y: 1,
+    font: { color: '#fff' },
+    bgcolor: 'rgba(50,50,50,0.5)'
+  },
+  scene: {
+    bgcolor: '#323233',
+    xaxis: { gridcolor: '#555', zerolinecolor: '#888', linecolor: '#aaa', tickcolor: '#ccc', color: '#fff' },
+    yaxis: { gridcolor: '#555', zerolinecolor: '#888', linecolor: '#aaa', tickcolor: '#ccc', color: '#fff' },
+    zaxis: { gridcolor: '#555', zerolinecolor: '#888', linecolor: '#aaa', tickcolor: '#ccc', color: '#fff' }
+  }
+}, {
+  displaylogo: false,
+  modeBarButtonsToRemove: [
+    'toImage','sendDataToCloud','zoom3d','pan3d','orbitRotation','tableRotation',
+    'hoverClosest3d','hoverClosestCartesian','lasso2d','select2d',
+    'zoom2d','pan2d','zoomIn2d','zoomOut2d','autoScale2d',
+    'resetScale2d','hoverClosestGl2d','hoverClosestPie','toggleHover',
+    'resetViews','resetCameraLastSave3d',
+    'toggleSpikelines','resetViewMapbox'
+  ]
+});
+
+
           });
-        });
     }
 
     setInterval(updatePlot, 2000);

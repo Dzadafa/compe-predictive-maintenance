@@ -3,6 +3,7 @@ import time
 import random
 import sys
 import math
+import datetime
 
 BROKER = "broker.emqx.io"
 PORT = 1883
@@ -49,11 +50,20 @@ while True:
     else:
         kategori = 0  # Below threshold
 
+
+    # timestamp = datetime.datetime.utcnow()
+    # plus_23_days = timestamp + datetime.timedelta(days=29)
+    # formatted = plus_23_days.strftime('%Y-%m-%dT%H:%M:%SZ')
+    #
+    timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+
     client.publish(f"{DEVICE_TOPIC}/Velocity/X", x)
     client.publish(f"{DEVICE_TOPIC}/Velocity/Y", y)
     client.publish(f"{DEVICE_TOPIC}/Velocity/Z", z)
     client.publish(f"{DEVICE_TOPIC}/RMS", rms)
     client.publish(f"{DEVICE_TOPIC}/Kategori", kategori)
+    client.publish(f"{DEVICE_TOPIC}/timestamp", timestamp)
+    # client.publish(f"{DEVICE_TOPIC}/timestamp", formatted)
 
     print(f"[PUB] {DEVICE_TOPIC}: X={x}, Y={y}, Z={z}, RMS={rms}, Kategori={kategori}")
 

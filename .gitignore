@@ -1,3 +1,5 @@
 venv/*
 __pycache__/*
 static/models/*
+config.yml
+cloudflare-instruction.txt

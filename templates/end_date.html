@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Maintenance Countdown</title>
+  <title>Maintenance End Date</title>
   <style>
     :root {
       --bg: #323233;
@@ -25,13 +25,7 @@
       text-align: center;
     }
     .container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
       padding: 10px;
-      box-sizing: border-box;
-      width: 100%;
     }
     h1 {
       margin: 0 0 8px;
@@ -44,11 +38,12 @@
       margin-bottom: 15px;
       opacity: .9;
     }
-    .time {
-      font-size: clamp(3rem, 18vw, 10rem);
+    .date {
+      font-size: clamp(2.5rem, 15vw, 8rem);
       margin: 10px 0;
       font-weight: 700;
       line-height: 1;
+      letter-spacing: 0.05em;
     }
     .err {
       color: var(--error-color);
@@ -60,9 +55,9 @@
 </head>
 <body>
   <div class="container">
-    <h1>Maintenance Countdown</h1>
+    <h1>Maintenance Due Date</h1>
     <div class="device">Device: <span id="deviceName">Loading...</span></div>
-    <div class="time" id="countdown">Loading…</div>
+    <div class="date" id="endDate">Loading…</div>
     <div class="err" id="err"></div>
   </div>
 
@@ -70,7 +65,7 @@
     const params = new URLSearchParams(window.location.search);
     const deviceId = Number(params.get('device') ?? 0);
     const deviceNameEl = document.getElementById('deviceName');
-    const cdEl = document.getElementById('countdown');
+    const endDateEl = document.getElementById('endDate');
     const errEl = document.getElementById('err');
 
     async function fetchDeviceName() {
@@ -88,22 +83,22 @@
         }
     }
 
-    async function fetchCountdown() {
+    async function fetchEndDate() {
       try {
-        const res = await fetch(`/get_countdown/${deviceId}`);
+        const res = await fetch(`/get_end_date/${deviceId}`);
         if (!res.ok) throw new Error('Device offline');
         const data = await res.json();
-        cdEl.textContent = data.pretty || 'No data';
+        endDateEl.textContent = data.end_date_str || 'No data';
         errEl.textContent = '';
       } catch (e) {
         errEl.textContent = e.message || 'Error';
-        cdEl.textContent = '—';
+        endDateEl.textContent = '—';
       }
     }
 
     fetchDeviceName();
-    fetchCountdown();
-    setInterval(fetchCountdown, 2000);
+    fetchEndDate();
+    setInterval(fetchEndDate, 2000);
   </script>
 </body>
 </html>
